@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Kotlin - the good the bad and the ugly</title>
+
+    <link rel="stylesheet" href="reveal.js/css/reveal.css">
+	  <link rel="stylesheet" href="reveal.js/css/theme/black.css" id="theme">
+	  <link rel="stylesheet" href="reveal.js/lib/css/zenburn.css" id="theme">
+    <style>
+      .reveal p {
+        text-align: left;
+      }
+      .reveal code {
+        background-color: #3f3f3f;
+        font-size: 0.9em;
+      }
+      .reveal ul {
+        display: block;
+        margin-left: 2em;
+      }
+      .reveal section img {
+        background-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown>
+          # Kotlin - the good the bad and the ugly
+        </section>
+
+        <section data-markdown>
+          ## Expressions
+
+          * Expressions produce values
+          * `if-else`, `when` are expressions in kotlin
+
+          ```kotlin
+          val isNegative = if (n < 0) true else false
+          ```
+        </section>
+
+        <section>
+          <h3>Time to a quiz</h3>
+
+          <div style="column-count: 2;">
+            <div style="display: inline-block; width: 400px" data-markdown>
+              ```kotlin
+              fun printSign(num: Int) {
+                  if (num < 0) {
+                      "negative"
+                  } else if (num > 0) {
+                      "positive"
+                  } else {
+                      "zero"
+                  }.let({ println(it) })
+              }
+              printSign(-2)
+              printSign(0)
+              printSign(2)
+              ```
+            </div>
+            <div style="display: inline-block; width: 450px" data-markdown>
+              ```kotlin
+              // What will it print?
+              // a) negative; zero; positive
+              // b) negative; zero
+              // c) negative; positive
+              // d) zero; positive
+              ```
+            </div>
+          </div>
+        </section>
+
+        <section data-markdown>
+          ```kotlin
+          // d) zero; positive
+          ```
+          ```kotlin
+          fun printSign(num: Int) {
+              val res: Any = if (num < 0) {
+                  "negative"  /* String */
+              } else (if (num > 0) {
+                  "positive"
+              } else {
+                  "zero"
+              }.let({ println(it) }) /* Unit */)
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ### Quiz again
+
+          ```kotlin
+          fun printSign(num: Int) {
+              when {
+                  num < 0 -> "negative"
+                  num > 0 -> "positive"
+                  num == 0 -> "zero"
+              }.let({ println(it) })
+          }
+          printSign(-2)
+          printSign(0)
+          printSign(2)
+          ```
+        </section>
+
+        <section data-markdown>
+          ```kotlin
+          // Compile error: 'when' expression must be exhaustive,
+          //  add necessary 'else' branch
+          ```
+        </section>
+
+        <section data-markdown>
+          ## Function - what's in name?
+
+          ```kotlin
+          public private protected internal
+          open final override abstract
+          inline noinline crossinline
+          infix operator
+          tailrec suspend
+          actual external
+          fun &lt;reified T&gt;
+          ```
+        </section>
+
+        <!-- <section data-markdown> -->
+        <!--   ## Visibility modifiers -->
+
+        <!--   * They are present in java bytecode -->
+        <!--   * JVM verifies bytecode when loading -->
+        <!--   * `internal` - visible within the same module -->
+        <!--   * The default visibility in kotlin is `public` -->
+        <!-- </section> -->
+
+        <section data-markdown>
+          ### Lambdas
+
+          ```kotlin
+          val f: (Int, Int) -> Int = { a, b -> a + b }
+          ```
+
+          ```kotlin
+          val f = { n: Int -> n * 2 }
+          ```
+
+          ```kotlin
+          val squares = listOf(1, 2, 3).map { it * it }
+          ```
+        </section>
+
+        <section data-markdown>
+          ### Inline functions
+
+          Add quiz
+        </section>
+
+        <section data-markdown>
+          ### Extension functions
+
+          ```kotlin
+          inline fun &lt;T, R&gt; Iterable&lt;T&gt;.map(transform: (T) -> R): List&lt;R&gt;
+          ```
+
+          ```kotlin
+          inline fun &lt;T&gt; T.apply(block: T.() -> Unit): T
+
+          BulkAction.newBuilder().apply {
+              id = source.id.toString()
+              routing = source.company.id.toString()
+              parent = source.company.id.toString()
+              type = docType
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          # Suspend it
+
+          It's all about coroutines
+        </section>
+
+        <section data-markdown>
+          ## The problem
+
+          ```kotlin
+          fun generateTokens(sentence: String): List&lt;Token&gt; {
+              val tokens = ArrayList&lt;Token&gt;()
+              val state = TokenizerState(sentence, tokens)
+              for (tok in parse(sentence)) {
+                  state.trans(tok)
+              }
+              state.finalize()
+              return tokens
+          }
+          fun tokenizeAndJoin(sentence: String): String {
+              val tokens = generateTokens(word)
+              return tokens.joinToString(" ")
+              //&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⬑ ConcurrentModificationException
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ## The solution
+
+          ```kotlin
+          fun generateTokens(sentence: String): List&lt;Token&gt; = buildSequence {
+              val state = TokenizerState(sentence)
+              for (tok in parse(sentence)) {
+                  yieldAll(state.gen(tok))
+              }
+              yieldAll(state.finalize())
+          }
+
+          fun tokenizeAndJoin(sentence: String): String {
+              return generateTokens(sentence).joinToString(" ")
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ## Coroutine builders
+
+          ```kotlin
+          fun &lt;T&gt buildSequence(
+              builderAction: suspend SequenceBuilder&lt;T&gt.() -> Unit
+          ): Sequence&lt;T&gt
+
+          abstract class SequenceBuilder&lt;in T&gt
+          internal constructor() {
+              abstract suspend fun yield(value: T)
+              abstract suspend fun yieldAll(iterator: Iterator&lt;T&gt)
+              /* ... */
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ## How does it work?
+
+          ```kotlin
+          fun generateTokens(sentence: String): List<Token> = buildSequence {
+              // LABEL_0
+              val state = TokenizerState(sentence)
+              for (tok in parse(sentence)) {
+                  // LABEL_1
+                  yieldAll(state.gen(tok))
+              }
+              // LABEL_2
+              yieldAll(state.finalize())
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ## How does it work?
+
+          ```java
+          switch(super.label) {
+              case 0:
+                  state = new TokenizerState(this.$sentence);
+                  iterator = this$0.parse(this.$word).iterator();
+                  break;
+              case 1:
+                  iterator = (Iterator)this.L$3;
+                  tok = (Tok)this.L$2;
+                  state = (TokenizerState)this.L$1;
+                  break;
+              case 2:
+                  return Unit.INSTANCE;
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ## How does it work?
+
+          ```java
+          do {
+              if (!iterator.hasNext()) {
+                  var10001 = state.finalize();
+                  super.label = 2;
+                  if (seqBuilder.yieldAll(var10001, this) != SUSPENDED) {}
+              }
+              tok = (Tok)iterator.next();
+              var10001 = state.gen(tok);
+              this.L$0 = seqBuilder; // <- Save state
+              this.L$1 = state;
+              this.L$2 = tok;
+              this.L$3 = iterator;
+              super.label = 1;       // <- Set label
+          } while(seqBuilder.yieldAll(var10001, this) != SUSPENDED)
+          ```
+        </section>
+
+        <section data-markdown>
+          ## How fast is it?
+
+          coroutines: 140_000 ops/s
+
+          list:       50_000 - 180_000 ops/s
+
+          python:     9_000 ops/s
+        </section>
+
+        <section data-markdown>
+          ## Coroutine builders
+
+          `launch` - fire and forget
+
+          `async` - runs the coroutine and returns its future result
+
+          `runBlocking` - blocks until the coroutine completes
+        </section>
+
+        <section data-markdown>
+          ## Coroutine context
+        </section>
+
+        <section data-markdown>
+
+        </section>
+
+        <!-- <section data-markdown> -->
+        <!--   https://anti-social.github.io/effective_search_slides -->
+        <!-- </section> -->
+      </div>
+    </div>
+
+    <script src="reveal.js/lib/js/head.min.js"></script>
+    <script src="reveal.js/js/reveal.js"></script>
+    <script>
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+        // Optional reveal.js plugins
+        dependencies: [
+          {
+            src: 'reveal.js/lib/js/classList.js',
+            condition: function() { return !document.body.classList; }
+          },
+          {
+            src: 'reveal.js/plugin/markdown/marked.js',
+            condition: function() { return !!document.querySelector( '[data-markdown]' ); }
+          },
+          {
+            src: 'reveal.js/plugin/markdown/markdown.js',
+            condition: function() { return !!document.querySelector( '[data-markdown]' ); }
+          },
+          {
+            src: 'reveal.js/plugin/highlight/highlight.js',
+            async: true,
+            callback: function() { hljs.initHighlightingOnLoad(); }
+          },
+          {
+            src: 'reveal.js/plugin/zoom-js/zoom.js',
+            async: true
+          },
+          {
+            src: 'reveal.js/plugin/notes/notes.js',
+            async: true
+          }
+        ]
+      });
+    </script>
+  </body>
+</html>
