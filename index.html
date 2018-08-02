@@ -233,6 +233,20 @@
         </section>
 
         <section data-markdown>
+          ### Named arguments
+
+          Good bye Java builders!
+
+          ```kotlin
+          fun createMessage(
+              id: Int, routing: Int? = null, text: String = ""
+          ): Message
+          ```
+
+          Will generate syntetic method with special flag argument
+        </section>
+
+        <section data-markdown>
           ### Data classes
 
           ```kotlin
@@ -271,10 +285,11 @@
           <h3>Nothing else matters</h3>
 
           <div style="column-count: 2;">
-            <div style="display: inline-block; width: 450px" data-markdown>
+            <div style="display: inline-block; width: 500px" data-markdown>
               ```kotlin
               fun fail() {
-                  throw RuntimeException("Something bad happens")
+                  throw RuntimeException(
+                      "Something bad happens")
               }
 
               val d = mapOf(0 to "zero")
@@ -282,7 +297,7 @@
               println(s)
               ```
             </div>
-            <div style="display: inline-block; width: 400px" data-markdown>
+            <div style="display: inline-block; width: 350px" data-markdown>
               ```kotlin
               // What will it print?
               a) zero
@@ -290,14 +305,22 @@
               b) null
               c) will not compile
               ```
-
-              ```kotlin
-              fun fail(): Nothing {
-                  throw RuntimeException("Something bad happens")
-              }
-              ```
             </div>
           </div>
+        </section>
+
+        <section data-markdown>
+          ### Nothing else matters
+
+          ```kotlin
+          c) will not compile
+          ```
+
+          ```kotlin
+          fun fail(): Nothing {
+              throw RuntimeException("Something bad happens")
+          }
+          ```
         </section>
 
         <section data-markdown>
@@ -501,6 +524,7 @@
 
           * https://github.com/angryziber/kotlin-puzzlers
           * http://natpryce.com/articles/000818.html
+          * https://github.com/Kotlin/kotlinx.coroutines/blob/master/coroutines-guide.md
         </section>
 
         <!-- <section data-markdown> -->
