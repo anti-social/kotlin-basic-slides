@@ -32,18 +32,35 @@
         </section>
 
         <section data-markdown>
+          ### Why kotlin?
+
+          * Null safety
+          * Type inference
+          * Multiple platforms: JVM, JS, Native (experimental)
+          * Batteries included
+          * Good interoperability with Java
+        </section>
+
+        <section data-markdown>
           ## Expressions
 
           * Expressions produce values
           * `if-else`, `when` are expressions in kotlin
+          * Even `return` and `throw` are expressions
 
           ```kotlin
           val isNegative = if (n < 0) true else false
+
+          val unitName = when (timeUnit) {
+              TimeUnit.SECONDS -&gt; "s"
+              TimeUnit.SECONDS -&gt; "ms"
+              else -&gt; throw IllegalArgumentException()
+          }
           ```
         </section>
 
         <section>
-          <h3>Time to a quiz</h3>
+          <h3>Quiz time</h3>
 
           <div style="column-count: 2;">
             <div style="display: inline-block; width: 400px" data-markdown>
@@ -92,14 +109,14 @@
         </section>
 
         <section data-markdown>
-          ### Quiz again
+          ### Quiz time
 
           ```kotlin
           fun printSign(num: Int) {
               when {
-                  num < 0 -> "negative"
-                  num > 0 -> "positive"
-                  num == 0 -> "zero"
+                  num < 0 -&gt; "negative"
+                  num &gt; 0 -&gt; "positive"
+                  num == 0 -&gt; "zero"
               }.let({ println(it) })
           }
           printSign(-2)
@@ -113,6 +130,8 @@
           // Compile error: 'when' expression must be exhaustive,
           //  add necessary 'else' branch
           ```
+
+          Without `.let()` it would be just a warning
         </section>
 
         <section data-markdown>
@@ -155,9 +174,78 @@
         </section>
 
         <section data-markdown>
-          ### Inline functions
+          ### Inline
 
-          Add quiz
+          Inlining may cause the generated code to grow
+
+          ```kotlin
+          inline fun <T> lock(lock: Lock, body: () -> T): T
+
+          lock(l) { foo() }
+          ```
+        </section>
+
+        <section>
+          <h3>Quiz time</h3>
+
+          <div style="column-count: 2;">
+            <div style="display: inline-block; width: 450px" data-markdown>
+              ```kotlin
+              fun numbers(list: List&lt;Int&gt;) {
+                  list.forEach {
+                      if (it > 2) return
+                      print(it)
+                  }
+                  print("ok")
+              }
+
+              numbers(listOf(1, 2, 3))
+              ```
+            </div>
+            <div style="display: inline-block; width: 400px" data-markdown>
+              ```kotlin
+              // What will it print?
+              // a) 123ok
+              // b) 12ok
+              // c) 12
+              // d) Infinite loop
+              ```
+            </div>
+          </div>
+        </section>
+
+        <section data-markdown>
+          ```kotlin
+          // c) 12
+          ```
+
+          ```kotlin
+          fun numbers(list: List&lt;Int&gt;) {
+              list.forEach {
+                  if (it > 2) return@forEach
+                  print(it)
+              }
+              print("ok")
+          }
+
+          // 12ok
+          ```
+        </section>
+
+        <section data-markdown>
+          ### Data classes
+
+          ```kotlin
+          data class User(val name: String, var age: Int)
+          ```
+
+          Will generate methods:
+
+          * `getName`, `getAge`, `setAge`
+          * `equals`, `hashCode`
+          * `toString`
+          * `copy`
+          * `component1`, `component2`; used for destructuring
         </section>
 
         <section data-markdown>
@@ -179,8 +267,54 @@
           ```
         </section>
 
+        <section>
+          <h3>Nothing else matters</h3>
+
+          <div style="column-count: 2;">
+            <div style="display: inline-block; width: 450px" data-markdown>
+              ```kotlin
+              fun fail() {
+                  throw RuntimeException("Something bad happens")
+              }
+
+              val d = mapOf(0 to "zero")
+              val s: String = d.get(0) ?: fail()
+              println(s)
+              ```
+            </div>
+            <div style="display: inline-block; width: 400px" data-markdown>
+              ```kotlin
+              // What will it print?
+              a) zero
+              b) RuntimeException
+              b) null
+              c) will not compile
+              ```
+
+              ```kotlin
+              fun fail(): Nothing {
+                  throw RuntimeException("Something bad happens")
+              }
+              ```
+            </div>
+          </div>
+        </section>
+
         <section data-markdown>
-          # Suspend it
+          ### Nothing else matters
+
+          Some facts about `Nothing`:
+
+          * `Nothing` has no instances
+          * `Nothing?` is the type of `null`
+          * An expression of type `Nothing` is unreachable
+          * `Nothing` is a subtype of every other type
+          * `Nothing?` is a subtype of all nullable type
+          * `Nothing?` is a supertype of `Nothing`
+        </section>
+
+        <section data-markdown>
+          ## Suspend it
 
           It's all about coroutines
         </section>
@@ -210,16 +344,16 @@
           ## The solution
 
           ```kotlin
-          fun generateTokens(sentence: String): List&lt;Token&gt; = buildSequence {
-              val state = TokenizerState(sentence)
-              for (tok in parse(sentence)) {
+          fun generateTokens(sent: String): List&lt;Token&gt; = buildSequence {
+              val state = TokenizerState(sent)
+              for (tok in parse(sent)) {
                   yieldAll(state.gen(tok))
               }
               yieldAll(state.finalize())
           }
 
-          fun tokenizeAndJoin(sentence: String): String {
-              return generateTokens(sentence).joinToString(" ")
+          fun tokenizeAndJoin(sent: String): String {
+              return generateTokens(sent).joinToString(" ")
           }
           ```
         </section>
@@ -245,10 +379,10 @@
           ## How does it work?
 
           ```kotlin
-          fun generateTokens(sentence: String): List<Token> = buildSequence {
+          fun generateTokens(sent: String): List&lt;Token&gt; = buildSequence {
               // LABEL_0
-              val state = TokenizerState(sentence)
-              for (tok in parse(sentence)) {
+              val state = TokenizerState(sent)
+              for (tok in parse(sent)) {
                   // LABEL_1
                   yieldAll(state.gen(tok))
               }
@@ -264,7 +398,7 @@
           ```java
           switch(super.label) {
               case 0:
-                  state = new TokenizerState(this.$sentence);
+                  state = new TokenizerState(this.$sent);
                   iterator = this$0.parse(this.$word).iterator();
                   break;
               case 1:
@@ -279,7 +413,7 @@
         </section>
 
         <section data-markdown>
-          ## How does it work?
+          ### How does it work?
 
           ```java
           do {
@@ -300,17 +434,21 @@
         </section>
 
         <section data-markdown>
-          ## How fast is it?
-
-          coroutines: 140_000 ops/s
-
-          list:       50_000 - 180_000 ops/s
-
-          python:     9_000 ops/s
+          ### How fast is it?
         </section>
 
         <section data-markdown>
-          ## Coroutine builders
+          ### How fast is it?
+
+          | | |
+          |---|---|
+          | coroutines | 140_000 ops/s |
+          | list | 50_000 - 180_000 ops/s |
+          | python | 9_000 ops/s |
+        </section>
+
+        <section data-markdown>
+          ### Coroutine builders
 
           `launch` - fire and forget
 
@@ -319,12 +457,50 @@
           `runBlocking` - blocks until the coroutine completes
         </section>
 
+        <!-- <section data-markdown> -->
+        <!--   ### Coroutine context -->
+        <!-- </section> -->
+
         <section data-markdown>
-          ## Coroutine context
+          ### Channels
+
+          Rendezvous, buffered, unlimited
+
+          ```kotlin
+          fun main(args: Array&lt;String&gt;) = runBlocking&lt;Unit&gt; {
+              val channel = Channel&lt;Int&gt;()
+              launch {
+                  for (x in 1..5) channel.send(x * x)
+              }
+
+              repeat(5) { println(channel.receive()) }
+              println("Done!")
+          }
+          ```
         </section>
 
         <section data-markdown>
+          ### Actors
 
+          ```kotlin
+          // This function launches a new counter actor
+          fun counterActor() = actor&lt;CounterMsg&gt; {
+              var counter = 0 // actor state
+              for (msg in channel) { // iterate over incoming messages
+                  when (msg) {
+                      is IncCounter -&gt; counter++
+                      is GetCounter -&gt; msg.response.complete(counter)
+                  }
+              }
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ### Links
+
+          * https://github.com/angryziber/kotlin-puzzlers
+          * http://natpryce.com/articles/000818.html
         </section>
 
         <!-- <section data-markdown> -->
