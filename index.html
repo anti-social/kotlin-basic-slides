@@ -343,7 +343,7 @@
         </section>
 
         <section data-markdown>
-          ## The problem
+          ### The problem
 
           ```kotlin
           fun generateTokens(sentence: String): List&lt;Token&gt; {
@@ -364,7 +364,7 @@
         </section>
 
         <section data-markdown>
-          ## The solution
+          ### The solution
 
           ```kotlin
           fun generateTokens(sent: String): List&lt;Token&gt; = buildSequence {
@@ -382,7 +382,11 @@
         </section>
 
         <section data-markdown>
-          ## Coroutine builders
+          ### How does it work?
+        </section>
+
+        <section data-markdown>
+          ### Coroutine builders
 
           ```kotlin
           fun &lt;T&gt buildSequence(
@@ -399,7 +403,23 @@
         </section>
 
         <section data-markdown>
-          ## How does it work?
+          ### Continuation Passing Style
+
+          ```kotlin
+          fun yield(iterator: Iterator&lt;T&gt, continuation: Continuation)
+          ```
+
+          ```kotlin
+          interface Continuation&lt;in T&gt; {
+              abstract fun resume(value: T)
+
+              abstract fun resumeWithException(exception: Throwable)
+          }
+          ```
+        </section>
+
+        <section data-markdown>
+          ### How does it work?
 
           ```kotlin
           fun generateTokens(sent: String): List&lt;Token&gt; = buildSequence {
@@ -416,7 +436,7 @@
         </section>
 
         <section data-markdown>
-          ## How does it work?
+          ### CPS transformation
 
           ```java
           switch(super.label) {
@@ -436,7 +456,7 @@
         </section>
 
         <section data-markdown>
-          ### How does it work?
+          ###  CPS transformation
 
           ```java
           do {
@@ -515,6 +535,40 @@
                       is GetCounter -&gt; msg.response.complete(counter)
                   }
               }
+          }
+          ```
+        </section>
+
+        <section>
+          <h3>Where is await?</h3>
+
+          <p>
+            Real-life example:
+          </p>
+
+          <pre><code>async def start_processing():
+    async for msg in consumer:
+        if process_message(msg):
+            # Did you forget await?
+            # Have a good evening!
+            consumer.commit()
+          </code></pre>
+
+          <p>
+            Sequential by default in kotlin
+          </p>
+        </section>
+
+        <section data-markdown>
+          ### Where is await?
+
+          Just wrap it with `async`:
+
+          ```kotlin
+          fun main(args: Array<String>) = runBlocking<Unit> {
+              val one = async { doSomethingUseful() }
+              val two = async { doSomethingUsefulDoingSomethingUseful() }
+              println("The results are: ${one.await()}, ${two.await()}")
           }
           ```
         </section>
